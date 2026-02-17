@@ -11,7 +11,7 @@ export class QueueService {
     private prisma: PrismaService,
     private tokensGateway: TokensGateway,
     @InjectQueue('queue-management') private queueManagement: Queue,
-  ) {}
+  ) { }
 
   // ==================== CRON Jobs ====================
 
@@ -60,35 +60,42 @@ export class QueueService {
       });
 
       if (!lastPresenceCheck || !lastPresenceCheck.isWithinGeofence) {
-        // Auto-cancel token
-        await this.prisma.token.update({
-          where: { id: token.id },
-          data: {
-            status: 'NO_SHOW',
-            cancelledAt: new Date(),
-            cancellationReason: 'Auto-cancelled: Did not reach counter',
-            autoCancel: true,
-          },
-        });
+        try {
+          // Auto-cancel token
+          await this.prisma.token.update({
+            where: { id: token.id },
+            data: {
+              status: 'NO_SHOW',
+              cancelledAt: new Date(),
+              cancellationReason: 'Auto-cancelled: Did not reach counter',
+              autoCancel: true,
+            },
+          });
 
-        // Log abuse
-        await this.prisma.abuseLog.create({
-          data: {
-            userId: token.userId,
-            eventType: 'NO_SHOW',
-            severity: 5,
-            description: 'Did not reach counter within time limit',
-          },
-        });
+          // Log abuse
+          await this.prisma.abuseLog.create({
+            data: {
+              userId: token.userId,
+              eventType: 'NO_SHOW',
+              severity: 5,
+              description: 'Did not reach counter within time limit',
+            },
+          });
 
-        // Notify user
-        this.tokensGateway.notifyTokenCancelled(
-          token.id,
-          'Auto-cancelled due to no-show',
-        );
+          // Notify user
+          this.tokensGateway.notifyTokenCancelled(
+            token.id,
+            'Auto-cancelled due to no-show',
+          );
 
-        // Broadcast queue update
-        await this.tokensGateway.broadcastQueueUpdate(token.serviceId);
+          // Broadcast queue update
+          await this.tokensGateway.broadcastQueueUpdate(token.serviceId);
+        } catch (error) {
+          // Ignore if token was already deleted or modified
+          if (error.code !== 'P2025') {
+            console.error(`Error auto-cancelling token ${token.id}:`, error);
+          }
+        }
       }
     }
   }
@@ -112,10 +119,17 @@ export class QueueService {
       for (const token of activeTokens) {
         const estimatedWaitTime = token.queuePosition * service.estimatedServiceTime;
 
-        await this.prisma.token.update({
-          where: { id: token.id },
-          data: { estimatedWaitTime },
-        });
+        try {
+          await this.prisma.token.update({
+            where: { id: token.id },
+            data: { estimatedWaitTime },
+          });
+        } catch (error) {
+          // Ignore if token was deleted concurrently
+          if (error.code !== 'P2025') {
+            console.error(`Error updating estimate for token ${token.id}:`, error);
+          }
+        }
       }
 
       // Broadcast update if there are changes

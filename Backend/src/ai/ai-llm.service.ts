@@ -19,7 +19,7 @@ interface AiLlmResult {
 export class AiLlmService {
   private readonly logger = new Logger(AiLlmService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly config: ConfigService) { }
 
   async inferIntent(
     message: string,
@@ -29,7 +29,7 @@ export class AiLlmService {
     const apiKey = this.config.get<string>('GEMINI_API_KEY');
     const model =
       this.config.get<string>('GEMINI_MODEL_NAME') ??
-      'gemini-2.5-pro';
+      'gemini-1.5-pro';
 
     if (!apiKey) {
       this.logger.warn('GEMINI_API_KEY not configured');

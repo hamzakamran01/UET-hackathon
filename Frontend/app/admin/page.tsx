@@ -46,10 +46,17 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const statsRes = await adminAPI.getStats();
+      const [statsRes, activityRes] = await Promise.all([
+        adminAPI.getStats(),
+        adminAPI.getRecentActivity()
+      ]);
+
       if (statsRes.data) {
-        setStats(statsRes.data.stats || defaultStats);
-        setRecentActivity(statsRes.data.recentActivity || []);
+        setStats(statsRes.data);
+      }
+
+      if (activityRes.data) {
+        setRecentActivity(activityRes.data);
       }
     } catch (error) {
       console.error('Failed to fetch dashboard data', error);
@@ -325,7 +332,7 @@ export default function AdminDashboard() {
                 {recentActivity.map((log, i) => (
                   <div key={i} className="flex items-start gap-4 p-4 hover:bg-slate-800/30 transition-colors">
                     <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${log.type === 'ERROR' ? 'bg-red-500 shadow-lg shadow-red-500/50' :
-                        log.type === 'WARNING' ? 'bg-amber-500 shadow-lg shadow-amber-500/50' : 'bg-blue-500 shadow-lg shadow-blue-500/50'
+                      log.type === 'WARNING' ? 'bg-amber-500 shadow-lg shadow-amber-500/50' : 'bg-blue-500 shadow-lg shadow-blue-500/50'
                       }`}></div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-200">{log.message || log.action || 'Unknown Action'}</p>

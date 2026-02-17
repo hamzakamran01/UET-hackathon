@@ -38,6 +38,8 @@ export default function Header() {
     return pathname.startsWith(href)
   }
 
+  if (pathname.startsWith('/admin')) return null;
+
   return (
     <>
       <header

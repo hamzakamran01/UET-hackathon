@@ -106,10 +106,12 @@ export class AdminService {
     return recentTokens.map((token) => {
       let message = '';
       let severity: 'info' | 'warning' | 'error' | 'success' = 'info';
+      const serviceName = token.service?.name || 'Unknown Service';
+      const userEmail = token.user?.email || 'Unknown User';
 
       switch (token.status) {
         case 'COMPLETED':
-          message = `Token ${token.tokenNumber} completed for ${token.service.name}`;
+          message = `Token ${token.tokenNumber} completed for ${serviceName}`;
           severity = 'success';
           break;
         case 'CANCELLED':
@@ -117,19 +119,23 @@ export class AdminService {
           severity = 'warning';
           break;
         case 'NO_SHOW':
-          message = `No-show for token ${token.tokenNumber} in ${token.service.name}`;
+          message = `No-show for token ${token.tokenNumber} in ${serviceName}`;
           severity = 'error';
           break;
         case 'CALLED':
-          message = `Token ${token.tokenNumber} called to counter in ${token.service.name}`;
+          message = `Token ${token.tokenNumber} called to counter in ${serviceName}`;
           severity = 'info';
           break;
         case 'IN_SERVICE':
-          message = `Token ${token.tokenNumber} currently being served in ${token.service.name}`;
+          message = `Token ${token.tokenNumber} currently being served in ${serviceName}`;
+          severity = 'info';
+          break;
+        case 'ACTIVE':
+          message = `New token ${token.tokenNumber} created for ${serviceName} by ${userEmail}`;
           severity = 'info';
           break;
         default:
-          message = `Token ${token.tokenNumber} created for ${token.service.name}`;
+          message = `Token ${token.tokenNumber} updated to ${token.status}`;
           severity = 'info';
       }
 
