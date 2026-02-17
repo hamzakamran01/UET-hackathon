@@ -88,7 +88,7 @@ export class AdminService {
       totalServices,
       activeTokens,
       completedToday,
-      avgWaitTime,
+      averageWaitTime: avgWaitTime,
       systemHealth: 100, // You can implement actual health check logic later
     };
   }

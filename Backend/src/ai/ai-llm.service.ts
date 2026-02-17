@@ -73,14 +73,24 @@ export class AiLlmService {
       },
     };
 
-    const response = await fetch(
-      `${url}?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      },
-    );
+    let response: Response;
+    try {
+      response = await fetch(
+        `${url}?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      );
+    } catch (fetchError: any) {
+      this.logger.error(`Gemini fetch error: ${fetchError.message}`);
+      return {
+        intent: null,
+        assistantReply:
+          'I am having trouble connecting to the AI brain right now. Please check your internet or retry later.',
+      };
+    }
 
     if (!response.ok) {
       this.logger.warn(`Gemini call failed: ${response.status}`);
