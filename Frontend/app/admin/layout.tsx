@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import AdminAssistantPanel from '@/components/admin/AdminAssistantPanel';
 import { Toaster } from 'sonner';
 
 export default function AdminLayout({
@@ -71,6 +72,8 @@ export default function AdminLayout({
                 collapsed={collapsed}
                 setMobileOpen={setMobileOpen}
             />
+
+            <AdminAssistantPanel />
 
             <main
                 className={`min-h-screen transition-all duration-300 pt-20 px-4 pb-8 lg:px-8 ${collapsed ? 'lg:ml-20' : 'lg:ml-[280px]'

@@ -204,6 +204,20 @@ SENDGRID_FROM_EMAIL=your-verified-email@domain.com
 SENDGRID_FROM_NAME="Digital Queue System"
 ```
 
+### C. AI Assistant (LLM)
+
+The admin AI assistant uses **Google Gemini** via the Generative Language API.
+
+Add the following environment variables to your `.env` (do not commit real values):
+
+```env
+# AI Assistant / LLM configuration (Gemini)
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL_NAME=gemini-2.5-pro
+```
+
+> The `AiModule` only sends minimal, non-PII context to the model and never logs prompts or responses.
+
 ---
 
 ## 6. Installation Steps

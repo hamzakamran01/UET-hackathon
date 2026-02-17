@@ -17,6 +17,7 @@ import { AbuseModule } from './abuse/abuse.module';
 import { AdminModule } from './admin/admin.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { RedisModule } from './common/redis/redis.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -117,6 +118,7 @@ import { RedisModule } from './common/redis/redis.module';
     AbuseModule,
     AdminModule,
     AnalyticsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

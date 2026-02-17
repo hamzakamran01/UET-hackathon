@@ -194,6 +194,11 @@ npm start
 - Recent activity feed
 - Premium Analytics highlight section
 
+### 4.1 Admin AI Assistant
+- Embedded AI chat panel in the admin layout
+- Natural-language queries about queues, tokens, and services
+- Backed by `/api/ai/chat` endpoint in the NestJS backend
+
 ### 5. Analytics Dashboard (`/admin/analytics`)
 - Real-time metrics visualization
 - Date range filtering
