@@ -739,6 +739,32 @@ export class TokensService {
     return this.markAsCompleted(tokenId);
   }
 
+  async submitFeedback(tokenId: string, rating: number, feedback?: string) {
+    const token = await this.prisma.token.findUnique({
+      where: { id: tokenId },
+    });
+
+    if (!token) {
+      throw new NotFoundException('Token not found');
+    }
+
+    if (token.status !== 'COMPLETED') {
+      throw new BadRequestException('Feedback can only be submitted for completed services');
+    }
+
+    if (token.rating) {
+      throw new BadRequestException('Feedback already submitted for this token');
+    }
+
+    return this.prisma.token.update({
+      where: { id: tokenId },
+      data: {
+        rating,
+        feedback,
+      },
+    });
+  }
+
   private generateTokenNumber(serviceName: string, position: number): string {
     const prefix = serviceName.substring(0, 2).toUpperCase();
     const number = position.toString().padStart(3, '0');

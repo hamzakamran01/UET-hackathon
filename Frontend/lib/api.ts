@@ -87,6 +87,9 @@ export const tokensAPI = {
 
   cancel: (id: string, reason?: string) =>
     api.delete(`/tokens/${id}`, { data: { reason } }),
+
+  submitFeedback: (id: string, rating: number, feedback?: string) =>
+    api.post(`/tokens/${id}/feedback`, { rating, feedback }),
 }
 
 export const presenceAPI = {

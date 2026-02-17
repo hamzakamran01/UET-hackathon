@@ -60,6 +60,12 @@ export class TokensController {
     return this.tokensService.getQueuePosition(id);
   }
 
+  @Post(':id/feedback')
+  async submitFeedback(@Param('id') id: string, @Body() body: { rating: number; feedback?: string }) {
+    return this.tokensService.submitFeedback(id, body.rating, body.feedback);
+  }
+
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   async cancelToken(@Request() req, @Param('id') id: string, @Body() dto: CancelTokenDto) {

@@ -11,6 +11,9 @@ import {
 import { servicesAPI, authAPI, tokensAPI } from '@/lib/api'
 import { toast } from 'sonner'
 import './../../globals.css';
+import { useAuthStore } from '@/store/authStore'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { WalkthroughOverlay, Step as TourStep } from '@/components/ui/WalkthroughOverlay'
 
 interface Service {
   id: string
@@ -34,10 +37,46 @@ export default function ServiceDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const serviceId = params.id as string
+  const { isAuthenticated, user } = useAuthStore()
 
   const [service, setService] = useState<Service | null>(null)
   const [loading, setLoading] = useState(true)
   const [step, setStep] = useState(Step.SERVICE_DETAILS)
+
+  // Tutorial State
+  const [showTutorial, setShowTutorial] = useState(false)
+
+  const tourSteps: TourStep[] = [
+    {
+      target: '#service-card-tour',
+      title: 'Detailed Service Info',
+      description: 'View live status, wait times, and location details for this service.',
+      position: 'right'
+    },
+    {
+      target: '#queue-stats-tour',
+      title: 'Live Queue Stats',
+      description: 'Check how many people are ahead of you and the estimated wait time before joining.',
+      position: 'bottom'
+    },
+    {
+      target: '#join-flow-tour',
+      title: 'Join the Queue',
+      description: isAuthenticated
+        ? 'Since you are signed in, you can join instantly with our One-Tap Join feature!'
+        : 'Enter your email to verify your identity and secure your spot in line.',
+      position: 'left'
+    }
+  ]
+
+  useEffect(() => {
+    // Check if user has seen tutorial
+    const hasSeen = localStorage.getItem('hasSeenServiceTutorial_v1')
+    if (!hasSeen && !loading && service) {
+      setTimeout(() => setShowTutorial(true), 1000) // Small delay for animations to finish
+      localStorage.setItem('hasSeenServiceTutorial_v1', 'true')
+    }
+  }, [loading, service])
 
   // Email verification state
   const [email, setEmail] = useState('')
@@ -151,12 +190,30 @@ export default function ServiceDetailsPage() {
     }
   }
 
+  // One-Tap Join Handler
+  const handleOneTapJoin = async () => {
+    setStep(Step.CREATING_TOKEN)
+    await createToken()
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center">
-          <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
-          <p className="text-slate-500 text-sm font-medium">Loading service details...</p>
+      <div className="min-h-screen bg-slate-50 overflow-hidden">
+        <div className="container-wide relative z-10 py-12 md:py-20">
+          <div className="mb-8">
+            <Skeleton className="h-10 w-48 rounded-lg" />
+          </div>
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+            {/* Left Column Skeleton */}
+            <div>
+              <Skeleton className="h-[500px] w-full rounded-3xl" />
+              <Skeleton className="h-40 w-full rounded-2xl mt-6" />
+            </div>
+            {/* Right Column Skeleton */}
+            <div>
+              <Skeleton className="h-[600px] w-full rounded-3xl" />
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -170,16 +227,14 @@ export default function ServiceDetailsPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-100/40 via-purple-50/40 to-transparent pointer-events-none"></div>
 
       <div className="container-wide relative z-10 py-12 md:py-20">
-        {/* Back Navigation */}
-        <motion.button
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          onClick={() => router.push('/services')}
-          className="group flex items-center gap-2 text-slate-500 hover:text-slate-900 mb-8 transition-colors px-4 py-2 rounded-lg hover:bg-white/50 backdrop-blur-sm"
-        >
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium">Back to Directory</span>
-        </motion.button>
+        {/* Breadcrumbs */}
+        <nav className="flex items-center text-sm font-medium text-slate-500 mb-8 overflow-x-auto whitespace-nowrap pb-2">
+          <button onClick={() => router.push('/')} className="hover:text-blue-600 transition-colors">Home</button>
+          <ChevronRight className="w-4 h-4 mx-2 text-slate-400 flex-shrink-0" />
+          <button onClick={() => router.push('/services')} className="hover:text-blue-600 transition-colors">Services</button>
+          <ChevronRight className="w-4 h-4 mx-2 text-slate-400 flex-shrink-0" />
+          <span className="text-slate-900 font-semibold truncate">{service.name}</span>
+        </nav>
 
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
 
@@ -189,7 +244,7 @@ export default function ServiceDetailsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="lg:sticky lg:top-8"
           >
-            <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden relative group">
+            <div id="service-card-tour" className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden relative group">
               {/* Card Header Background */}
               <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 h-48 relative overflow-hidden">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
@@ -218,7 +273,7 @@ export default function ServiceDetailsPage() {
                 </p>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-8">
+                <div id="queue-stats-tour" className="grid grid-cols-2 gap-4 mb-8">
                   <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="p-2 bg-blue-100/50 rounded-lg text-blue-600">
@@ -285,33 +340,37 @@ export default function ServiceDetailsPage() {
 
           {/* Right: Interactive Token Flow */}
           <motion.div
+            id="join-flow-tour"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
           >
             <div className="bg-white rounded-3xl shadow-2xl p-8 lg:p-10 border border-slate-100">
-              {/* Stepper Header */}
-              <div className="flex items-center justify-between mb-10 relative">
-                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 -z-10 bg-opacity-50"></div>
-                {[
-                  { icon: Shield, label: 'Identity', bg: 'bg-indigo-600', active: step >= Step.EMAIL_VERIFICATION },
-                  { icon: Zap, label: 'Issue', bg: 'bg-emerald-600', active: step === Step.CREATING_TOKEN },
-                  { icon: CheckCircle, label: 'Ready', bg: 'bg-blue-600', active: false },
-                ].map((item, index) => (
-                  <div key={index} className="flex flex-col items-center bg-white px-2 z-10">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 border-2 ${item.active
+              {/* Stepper Header (Only show if not authenticated or if in creating step) */}
+              {(!isAuthenticated || step === Step.CREATING_TOKEN) && (
+                <div className="flex items-center justify-between mb-10 relative">
+                  <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 -z-10 bg-opacity-50"></div>
+                  {[
+                    { icon: Shield, label: 'Identity', bg: 'bg-indigo-600', active: step >= Step.EMAIL_VERIFICATION },
+                    { icon: Zap, label: 'Issue', bg: 'bg-emerald-600', active: step === Step.CREATING_TOKEN },
+                    { icon: CheckCircle, label: 'Ready', bg: 'bg-blue-600', active: false },
+                  ].map((item, index) => (
+                    <div key={index} className="flex flex-col items-center bg-white px-2 z-10">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 border-2 ${item.active
                         ? `${item.bg} border-transparent text-white shadow-lg scale-110`
                         : 'bg-slate-50 border-slate-200 text-slate-300'
-                      }`}>
-                      <item.icon className="w-4 h-4" />
+                        }`}>
+                        <item.icon className="w-4 h-4" />
+                      </div>
+                      <span className={`text-xs mt-2 font-semibold uppercase tracking-wide transition-colors ${item.active ? 'text-slate-900' : 'text-slate-400'
+                        }`}>
+                        {item.label}
+                      </span>
                     </div>
-                    <span className={`text-xs mt-2 font-semibold uppercase tracking-wide transition-colors ${item.active ? 'text-slate-900' : 'text-slate-400'
-                      }`}>
-                      {item.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
+
 
               <AnimatePresence mode="wait">
                 {/* 1. INITIAL CTA */}
@@ -326,19 +385,43 @@ export default function ServiceDetailsPage() {
                     <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
                       <Zap className="w-10 h-10 text-blue-600" />
                     </div>
-                    <h2 className="text-2xl font-bold text-slate-900 mb-4">
-                      Skip the Physical Line
-                    </h2>
-                    <p className="text-slate-500 mb-8 max-w-sm mx-auto">
-                      Join the digital queue instantly. We'll secure your spot and notify you when it's your turn.
-                    </p>
-                    <button
-                      onClick={() => setStep(Step.EMAIL_VERIFICATION)}
-                      className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-lg shadow-xl shadow-slate-900/10 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
-                    >
-                      Get My Token
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
+
+                    {isAuthenticated ? (
+                      // Authenticated View
+                      <>
+                        <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                          Welcome back, {user?.name?.split(' ')[0] || 'User'}!
+                        </h2>
+                        <p className="text-slate-500 mb-8 max-w-sm mx-auto">
+                          You're signed in and ready to join. One tap is all it takes to secure your spot.
+                        </p>
+                        <button
+                          onClick={handleOneTapJoin}
+                          className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-lg shadow-xl shadow-blue-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 animate-shimmer bg-[length:200%_100%]"
+                        >
+                          <Zap className="w-5 h-5 fill-current" />
+                          One-Tap Join
+                        </button>
+                      </>
+                    ) : (
+                      // Guest View
+                      <>
+                        <h2 className="text-2xl font-bold text-slate-900 mb-4">
+                          Skip the Physical Line
+                        </h2>
+                        <p className="text-slate-500 mb-8 max-w-sm mx-auto">
+                          Join the digital queue instantly. We'll secure your spot and notify you when it's your turn.
+                        </p>
+                        <button
+                          onClick={() => setStep(Step.EMAIL_VERIFICATION)}
+                          className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-lg shadow-xl shadow-slate-900/10 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+                        >
+                          Get My Token
+                          <ArrowRight className="w-5 h-5" />
+                        </button>
+                      </>
+                    )}
+
                     <p className="mt-4 text-xs text-slate-400">
                       By joining, you agree to our Terms of Service
                     </p>
@@ -496,6 +579,11 @@ export default function ServiceDetailsPage() {
 
         </div>
       </div>
+      <WalkthroughOverlay
+        show={showTutorial}
+        steps={tourSteps}
+        onComplete={() => setShowTutorial(false)}
+      />
     </div>
   )
 }

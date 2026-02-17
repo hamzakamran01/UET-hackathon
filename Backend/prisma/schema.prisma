@@ -112,6 +112,10 @@ model Token {
   cancellationReason String?
   autoCancel        Boolean       @default(false)
 
+  // Feedback
+  rating            Int?          // 1-5 stars
+  feedback          String?
+
   // Relations
   presenceChecks    PresenceCheck[]
 

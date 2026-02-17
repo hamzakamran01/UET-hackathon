@@ -14,6 +14,8 @@ import { toast } from 'sonner'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import './../../globals.css';
+import { Skeleton } from '@/components/ui/Skeleton'
+import { FeedbackModal } from '@/components/token/FeedbackModal'
 
 interface Token {
   id: string
@@ -51,6 +53,9 @@ export default function TokenDashboard() {
   const [distance, setDistance] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Feedback Modal State
+  const [showFeedback, setShowFeedback] = useState(false)
 
   // Geolocation tracking
   const checkPresence = useCallback(async () => {
@@ -210,6 +215,17 @@ export default function TokenDashboard() {
     }
   }, [])
 
+  // Check for feedback opportunity
+  useEffect(() => {
+    if (token?.status === 'COMPLETED' && !token.rating) {
+      const hasGivenFeedback = localStorage.getItem(`feedback_given_${token.id}`)
+      if (!hasGivenFeedback) {
+        // Small delay to allow user to realize it's completed
+        setTimeout(() => setShowFeedback(true), 1500)
+      }
+    }
+  }, [token])
+
   const handleCancelToken = async () => {
     if (!confirm('Are you sure you want to cancel this token?')) return
 
@@ -313,10 +329,26 @@ export default function TokenDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center">
-          <div className="w-16 h-16 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-          <p className="text-slate-500 font-medium">Loading your token...</p>
+      <div className="min-h-screen bg-slate-50 py-8 px-4 md:py-12 relative overflow-hidden">
+        <div className="max-w-2xl mx-auto relative z-10 w-full space-y-8">
+          <div className="text-center space-y-2">
+            <Skeleton className="h-8 w-48 mx-auto rounded-lg" />
+            <Skeleton className="h-4 w-32 mx-auto rounded-md" />
+          </div>
+
+          <div className="flex gap-2 justify-center">
+            <Skeleton className="h-12 w-12 rounded-xl" />
+            <Skeleton className="h-12 w-12 rounded-xl" />
+            <Skeleton className="h-12 w-12 rounded-xl" />
+            <Skeleton className="h-12 w-24 rounded-xl ml-auto" />
+          </div>
+
+          <Skeleton className="h-[400px] w-full rounded-3xl" />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-32 w-full rounded-2xl" />
+            <Skeleton className="h-32 w-full rounded-2xl" />
+          </div>
         </div>
       </div>
     )
@@ -568,6 +600,19 @@ export default function TokenDashboard() {
           </p>
         </motion.div>
       </div>
+
+      {token && (
+        <FeedbackModal
+          isOpen={showFeedback}
+          onClose={() => setShowFeedback(false)}
+          tokenId={token.id}
+          serviceName={token.service.name}
+          onSuccess={() => {
+            localStorage.setItem(`feedback_given_${token.id}`, 'true')
+            setShowFeedback(false)
+          }}
+        />
+      )}
     </div>
   )
 }
