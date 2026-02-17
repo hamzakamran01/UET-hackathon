@@ -40,14 +40,7 @@ const nextConfig = {
   },
 
   // Webpack configuration for better module resolution
-  webpack: (config, { isServer }) => {
-    // Handle framer-motion on server side
-    if (isServer) {
-      config.externals = [...(config.externals || []), 'framer-motion']
-    }
 
-    return config
-  },
 }
 
 module.exports = nextConfig

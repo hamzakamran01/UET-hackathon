@@ -16,6 +16,7 @@ import jsPDF from 'jspdf'
 import './../../globals.css';
 import { Skeleton } from '@/components/ui/Skeleton'
 import { FeedbackModal } from '@/components/token/FeedbackModal'
+import { CancelTokenModal } from '@/components/token/CancelTokenModal'
 
 interface Token {
   id: string
@@ -23,6 +24,7 @@ interface Token {
   status: string
   queuePosition: number
   estimatedWaitTime: number
+  rating?: number
   service: {
     name: string
     geofenceRadius: number
@@ -56,6 +58,10 @@ export default function TokenDashboard() {
 
   // Feedback Modal State
   const [showFeedback, setShowFeedback] = useState(false)
+
+  // Cancel Modal State
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
 
   // Geolocation tracking
   const checkPresence = useCallback(async () => {
@@ -226,16 +232,21 @@ export default function TokenDashboard() {
     }
   }, [token])
 
-  const handleCancelToken = async () => {
-    if (!confirm('Are you sure you want to cancel this token?')) return
+  const handleCancelToken = () => {
+    setShowCancelModal(true)
+  }
 
+  const confirmCancel = async () => {
     try {
+      setIsCancelling(true)
       await tokensAPI.cancel(tokenId, 'User cancelled')
       toast.success('Token cancelled successfully')
       router.push('/')
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Failed to cancel token'
       toast.error(errorMessage)
+      setIsCancelling(false)
+      setShowCancelModal(false)
     }
   }
 
@@ -601,6 +612,7 @@ export default function TokenDashboard() {
         </motion.div>
       </div>
 
+
       {token && (
         <FeedbackModal
           isOpen={showFeedback}
@@ -611,6 +623,15 @@ export default function TokenDashboard() {
             localStorage.setItem(`feedback_given_${token.id}`, 'true')
             setShowFeedback(false)
           }}
+        />
+      )}
+
+      {token && (
+        <CancelTokenModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          onConfirm={confirmCancel}
+          isCancelling={isCancelling}
         />
       )}
     </div>

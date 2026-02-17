@@ -1,5 +1,5 @@
 'use client';
-export const dynamic = 'force-dynamic';
+
 
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -9,6 +9,7 @@ import {
   Users, TrendingUp, Globe, BarChart3, Star, MessageSquare,
   Sparkles, Target, Award, Workflow, Bell, Play
 } from 'lucide-react'
+import LogoTicker from '@/components/home/LogoTicker';
 import './globals.css';
 
 export default function HomePage() {
@@ -147,23 +148,10 @@ export default function HomePage() {
 
       {/* 
         ------------------------------------
-        SOCIAL PROOF - Minimal Ribbon
+        SOCIAL PROOF - Logo Ticker
         ------------------------------------
       */}
-      <section className="py-10 border-y border-slate-200 bg-white">
-        <div className="container-wide">
-          <p className="text-center text-sm font-medium text-slate-500 mb-8 uppercase tracking-widest">
-            Trusted by innovative teams at
-          </p>
-          <div className="flex flex-wrap justify-center gap-12 lg:gap-20 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-            {['Acme Corp', 'GlobalBank', 'TechScale', 'HealthPlus', 'UniSystems'].map((brand) => (
-              <span key={brand} className="text-xl font-extrabold text-slate-400 flex items-center gap-2">
-                <Globe className="w-5 h-5" /> {brand}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
+      <LogoTicker />
 
       {/* 
         ------------------------------------

@@ -75,8 +75,8 @@ export default function Header() {
                       key={item.name}
                       onClick={() => router.push(item.href)}
                       className={`relative flex items-center gap-2 px-5 py-2 rounded-full font-medium text-sm transition-all duration-300 ${active
-                          ? 'text-blue-600 bg-white shadow-sm ring-1 ring-slate-200'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                        ? 'text-blue-600 bg-white shadow-sm ring-1 ring-slate-200'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                         }`}
                     >
                       <Icon className={`w-4 h-4 ${active ? 'fill-current opacity-20' : ''}`} />
@@ -197,13 +197,21 @@ export default function Header() {
                   </div>
                 </>
               ) : (
-                <button
-                  onClick={() => router.push('/services')}
-                  className="hidden sm:flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full font-semibold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300"
-                >
-                  <Ticket className="w-4 h-4" />
-                  <span>Get Token</span>
-                </button>
+                <div className="hidden sm:flex items-center gap-3">
+                  <button
+                    onClick={() => router.push('/login')}
+                    className="text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors"
+                  >
+                    Log In
+                  </button>
+                  <button
+                    onClick={() => router.push('/services')}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full font-semibold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300"
+                  >
+                    <Ticket className="w-4 h-4" />
+                    <span>Get Token</span>
+                  </button>
+                </div>
               )}
 
               {/* Mobile Menu Button */}
@@ -242,8 +250,8 @@ export default function Header() {
                         setShowMobileMenu(false)
                       }}
                       className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl font-semibold transition-all ${active
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'text-slate-600 hover:bg-slate-50'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-slate-600 hover:bg-slate-50'
                         }`}
                     >
                       <Icon className="w-5 h-5" />
@@ -253,7 +261,16 @@ export default function Header() {
                 })}
 
                 {!isAuthenticated && (
-                  <div className="pt-4 mt-4 border-t border-slate-100">
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex flex-col gap-3">
+                    <button
+                      onClick={() => {
+                        router.push('/login')
+                        setShowMobileMenu(false)
+                      }}
+                      className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-700 px-6 py-4 rounded-2xl font-bold hover:bg-slate-200 transition-colors"
+                    >
+                      Log In
+                    </button>
                     <button
                       onClick={() => {
                         router.push('/services')

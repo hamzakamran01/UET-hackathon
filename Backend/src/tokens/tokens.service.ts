@@ -108,6 +108,19 @@ export class TokensService {
         throw new BadRequestException('Service queue is full. Please try again later.');
       }
 
+      // Check total active tokens across ALL services
+      const totalActiveTokens = await this.prisma.token.count({
+        where: {
+          userId,
+          status: { in: ['ACTIVE', 'CALLED'] },
+        },
+      });
+
+      if (totalActiveTokens >= 2) {
+        console.log('❌ User reached max concurrent tokens:', totalActiveTokens);
+        throw new BadRequestException('You cannot have more than 2 active tokens simultaneously.');
+      }
+
       if (recentNoShows >= 3) {
         console.log('❌ User suspended due to no-shows:', recentNoShows);
         throw new ForbiddenException('Account temporarily suspended due to multiple no-shows');

@@ -6,6 +6,8 @@ import { Providers } from '@/components/shared/Providers';
 import { Toaster } from 'sonner';
 import WelcomeOverlay from '@/components/shared/WelcomeOverlay';
 import DeveloperBadge from '@/components/shared/DeveloperBadge';
+import ActiveTokenBar from '@/components/shared/ActiveTokenBar';
+import Header from '@/components/shared/Header';
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -24,10 +26,14 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <WelcomeOverlay />
+          <Header />
           {children}
 
           {/* Professional Developer Badge - Top Left */}
           <DeveloperBadge />
+
+          {/* Persistent Active Token Bar */}
+          <ActiveTokenBar />
 
           <Toaster position="top-right" richColors />
         </Providers>
