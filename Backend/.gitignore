@@ -1,0 +1,84 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+.env.test
+
+# Build output
+dist/
+dist-seed/
+build/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+error.log
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Testing
+coverage/
+.nyc_output/
+*.spec.ts.snap
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+prisma/migrations/migration_lock.toml
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+tmp/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Deployment
+.vercel
+.fly
+
+# Scripts output
+scripts/*.log
+
+# Database backups
+*.sql
+*.dump
+backup/
+
+# Sensitive data
+*.pem
+*.key
+*.cert
+secrets/

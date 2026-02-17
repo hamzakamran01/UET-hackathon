@@ -1,0 +1,325 @@
+// Prisma Schema for Digital Queue Management System (DQMS)
+// Database: PostgreSQL
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-musl-openssl-3.0.x"]
+}
+
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== User Model ====================
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  phone         String?   @unique // Made optional for email-only users
+  emailVerified Boolean   @default(false)
+  phoneVerified Boolean   @default(false)
+  isBlocked     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  tokens        Token[]
+  abuseLogs     AbuseLog[]
+
+  // Indexes for faster lookups
+  @@index([email])
+  @@index([phone])
+}
+
+// ==================== Admin Model ====================
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // hashed with bcrypt
+  name      String
+  role      AdminRole @default(ADMIN)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+}
+
+// ==================== Service Model ====================
+model Service {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  description       String?
+  isActive          Boolean  @default(true)
+
+  // Queue Configuration
+  maxDailyTokens    Int      @default(1000)
+  maxConcurrentTokens Int    @default(100)
+
+  // Geofence Configuration
+  geofenceRadius    Float    @default(100) // meters
+  latitude          Float
+  longitude         Float
+  address           String?
+
+  // Timing Configuration
+  presenceGraceTime Int      @default(120) // seconds before turn
+  counterReachTime  Int      @default(120) // seconds to reach counter
+  estimatedServiceTime Int   @default(300) // average service time in seconds
+
+  // Stats
+  totalTokensIssued Int      @default(0)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  tokens            Token[]
+
+  @@index([isActive])
+}
+
+// ==================== Token Model ====================
+model Token {
+  id                String        @id @default(cuid())
+  tokenNumber       String        @unique
+  status            TokenStatus   @default(ACTIVE)
+  queuePosition     Int
+  estimatedWaitTime Int?          // in seconds
+
+  // User and Service References
+  userId            String
+  serviceId         String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service           Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  calledAt          DateTime?
+  serviceStartedAt  DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+
+  // Cancellation details
+  cancellationReason String?
+  autoCancel        Boolean       @default(false)
+
+  // Relations
+  presenceChecks    PresenceCheck[]
+
+  // Indexes for performance
+  @@index([serviceId, status, queuePosition])
+  @@index([userId, status])
+  @@index([tokenNumber])
+  @@index([createdAt])
+  @@index([serviceId, status, updatedAt])
+  @@index([userId, serviceId, status]) // Optimize existing token check
+  @@index([userId, createdAt]) // Optimize daily limit check
+}
+
+enum TokenStatus {
+  ACTIVE          // Waiting in queue
+  CALLED          // User's turn, called to counter
+  IN_SERVICE      // Currently being served
+  COMPLETED       // Service completed successfully
+  CANCELLED       // Manually cancelled by user
+  NO_SHOW         // Auto-cancelled due to absence
+  EXPIRED         // Token expired (end of day)
+}
+
+// ==================== Presence Check Model ====================
+model PresenceCheck {
+  id                String   @id @default(cuid())
+  tokenId           String
+  token             Token    @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  // Location Data
+  latitude          Float
+  longitude         Float
+  distanceMeters    Float    // calculated distance from service location
+  isWithinGeofence  Boolean
+  accuracy          Float?   // GPS accuracy in meters
+
+  // Compliance
+  checkType         PresenceCheckType
+  isCompliant       Boolean  @default(true)
+
+  checkedAt         DateTime @default(now())
+
+  @@index([tokenId, checkedAt])
+  @@index([isWithinGeofence])
+}
+
+enum PresenceCheckType {
+  INITIAL         // When token is created
+  SCHEDULED       // Periodic check
+  ON_DEMAND       // Requested by system
+  NEAR_TURN       // 5 positions before turn
+  AT_TURN         // When turn arrives
+}
+
+// ==================== Abuse Log Model ====================
+model AbuseLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  eventType   AbuseEventType
+  severity    Int      @default(1)  // 1-10 scale
+
+  // Event Details
+  description String?
+  metadata    Json?    // Additional data (token IDs, timestamps, etc.)
+
+  // Action Taken
+  actionTaken String?  // e.g., "1 hour cooldown", "24h ban"
+  resolved    Boolean  @default(false)
+  resolvedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId, eventType])
+  @@index([createdAt])
+  @@index([severity])
+  @@index([userId, eventType, createdAt]) // Optimize abuse history check
+}
+
+enum AbuseEventType {
+  NO_SHOW               // User didn't show up when called
+  RAPID_CANCELLATION    // Multiple cancellations in short time
+  RATE_LIMIT_HIT        // Exceeded rate limits
+  GEOFENCE_SPOOF        // Suspicious location changes
+  OTP_ABUSE             // Too many OTP requests
+  DUPLICATE_TOKEN       // Attempted multiple tokens
+  SUSPICIOUS_PATTERN    // Anomalous behavior detected
+  USER_BANNED           // User was banned by admin
+  PRESENCE_VIOLATION    // Failed presence check
+  MULTIPLE_CANCELLATIONS // Multiple cancellations pattern
+  SUSPICIOUS_ACTIVITY   // Suspicious activity detected
+  RATE_LIMIT_EXCEEDED   // Rate limit exceeded
+}
+
+// ==================== OTP Verification Model ====================
+model OTPVerification {
+  id        String   @id @default(cuid())
+
+  // Contact Info
+  email     String?
+  phone     String?
+
+  // OTP Data
+  code      String   // 6-digit code
+  type      OTPType
+
+  // Status
+  isVerified Boolean @default(false)
+  attempts   Int     @default(0)
+  maxAttempts Int    @default(3)
+
+  // Expiry
+  expiresAt DateTime
+  verifiedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([email, type, isVerified])
+  @@index([phone, type, isVerified])
+  @@index([expiresAt])
+}
+
+enum OTPType {
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+  PASSWORD_RESET
+}
+
+// ==================== Queue Statistics Model ====================
+model QueueStatistics {
+  id                    String   @id @default(cuid())
+  serviceId             String?
+
+  // Daily Stats
+  date                  DateTime @unique @default(now())
+  totalTokensIssued     Int      @default(0)
+  totalTokensCompleted  Int      @default(0)
+  totalTokensCancelled  Int      @default(0)
+  totalNoShows          Int      @default(0)
+
+  // Performance Metrics
+  averageWaitTime       Float    @default(0)
+  averageServiceTime    Float    @default(0)
+  peakHourStart         Int?     // hour of day (0-23)
+  peakHourTokens        Int      @default(0)
+
+  // System Health
+  averageQueueLength    Float    @default(0)
+  maxQueueLength        Int      @default(0)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([date])
+  @@index([serviceId, date])
+}
+
+// ==================== System Configuration Model ====================
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      ConfigType @default(STRING)
+  description String?
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([key])
+}
+
+enum ConfigType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+}
+
+// ==================== Notification Model ====================
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+
+  type        NotificationType
+  title       String
+  message     String
+  data        Json?    // Additional payload
+
+  // Status
+  isRead      Boolean  @default(false)
+  isSent      Boolean  @default(false)
+
+  // Delivery
+  sentAt      DateTime?
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  TOKEN_ISSUED
+  QUEUE_UPDATE
+  TURN_APPROACHING
+  YOUR_TURN
+  TOKEN_CANCELLED
+  PRESENCE_REQUIRED
+  SERVICE_COMPLETED
+  SYSTEM_ALERT
+}

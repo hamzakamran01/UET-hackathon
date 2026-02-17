@@ -1,0 +1,332 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Activity,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Users,
+  TrendingUp,
+  BarChart3,
+  Calendar,
+  Download,
+} from 'lucide-react';
+import KPICard from '@/components/analytics/KPICard';
+import LineChart from '@/components/analytics/LineChart';
+import PieChart from '@/components/analytics/PieChart';
+import BarChart from '@/components/analytics/BarChart';
+import DateRangePicker from '@/components/analytics/DateRangePicker';
+import analyticsService from '@/lib/api/analytics';
+import {
+  OverviewResponse,
+  DateRangePreset,
+  AnalyticsQuery,
+} from '@/types/analytics';
+import Link from 'next/link';
+
+export default function AnalyticsDashboard() {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<OverviewResponse | null>(null);
+  const [query, setQuery] = useState<AnalyticsQuery>({
+    preset: DateRangePreset.LAST_7_DAYS,
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [query]);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await analyticsService.getOverview(query);
+      setData(response);
+    } catch (err: any) {
+      console.error('Failed to fetch analytics:', err);
+      setError(err.response?.data?.message || 'Failed to load analytics data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatChartData = () => {
+    if (!data?.recentTrends) return [];
+
+    return data.recentTrends.map((trend) => {
+      const date = new Date(trend.timestamp);
+      return {
+        time: date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+        }),
+        'Wait Time (min)': Math.round(trend.averageWaitTime * 10) / 10,
+        'Tokens': trend.tokenCount,
+      };
+    });
+  };
+
+  const formatStatusDistribution = () => {
+    if (!data?.statusDistribution) return [];
+
+    const statusColors: { [key: string]: string } = {
+      COMPLETED: '#10b981',
+      ACTIVE: '#3b82f6',
+      CALLED: '#8b5cf6',
+      IN_SERVICE: '#f59e0b',
+      CANCELLED: '#ef4444',
+      NO_SHOW: '#dc2626',
+      EXPIRED: '#6b7280',
+    };
+
+    return data.statusDistribution.map((status) => ({
+      name: status.status.replace('_', ' '),
+      value: status.count,
+      percentage: status.percentage,
+      fill: statusColors[status.status] || '#6b7280',
+    }));
+  };
+
+  const formatServiceData = () => {
+    if (!data?.topServices) return [];
+
+    return data.topServices.map((service) => ({
+      name: service.serviceName.substring(0, 15) + (service.serviceName.length > 15 ? '...' : ''),
+      'Tokens': service.totalTokens,
+      'Completed': service.completedTokens,
+      'No-Shows': service.noShowTokens,
+    }));
+  };
+
+  if (loading && !data) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse space-y-8">
+            <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg w-1/3"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="h-40 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+            <p className="text-red-800 dark:text-red-200 font-medium">{error}</p>
+            <button
+              onClick={fetchAnalytics}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6"
+        >
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+              Analytics Dashboard
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Enterprise-grade insights and performance metrics
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Export Report
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Date Range Filter */}
+        <DateRangePicker value={query} onChange={setQuery} />
+
+        {/* Quick Links */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Link
+            href="/admin/analytics/trends"
+            className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow flex items-center gap-3"
+          >
+            <TrendingUp className="w-8 h-8 text-blue-500" />
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Trends</h3>
+              <p className="text-sm text-gray-500">View historical trends</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/analytics/peak-hours"
+            className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow flex items-center gap-3"
+          >
+            <Calendar className="w-8 h-8 text-purple-500" />
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Peak Hours</h3>
+              <p className="text-sm text-gray-500">Identify busy periods</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/analytics/performance"
+            className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow flex items-center gap-3"
+          >
+            <BarChart3 className="w-8 h-8 text-green-500" />
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Performance</h3>
+              <p className="text-sm text-gray-500">Service comparison</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/analytics/behavior"
+            className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow flex items-center gap-3"
+          >
+            <Users className="w-8 h-8 text-yellow-500" />
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">User Behavior</h3>
+              <p className="text-sm text-gray-500">Analyze patterns</p>
+            </div>
+          </Link>
+        </div>
+
+        {/* KPI Cards */}
+        {data?.metrics && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <KPICard
+              metric={data.metrics.activeQueueDepth}
+              icon={Activity}
+              colorScheme="blue"
+            />
+            <KPICard
+              metric={data.metrics.averageWaitTime}
+              icon={Clock}
+              colorScheme="purple"
+            />
+            <KPICard
+              metric={data.metrics.serviceLevel}
+              icon={TrendingUp}
+              colorScheme="green"
+            />
+            <KPICard
+              metric={data.metrics.completionRate}
+              icon={CheckCircle}
+              colorScheme="green"
+            />
+            <KPICard
+              metric={data.metrics.noShowRate}
+              icon={XCircle}
+              colorScheme="red"
+            />
+            <KPICard
+              metric={data.metrics.averageServiceTime}
+              icon={Clock}
+              colorScheme="yellow"
+            />
+            <KPICard
+              metric={data.metrics.tokensToday}
+              icon={BarChart3}
+              colorScheme="blue"
+            />
+            <KPICard
+              metric={data.metrics.totalUsers}
+              icon={Users}
+              colorScheme="purple"
+            />
+          </div>
+        )}
+
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Wait Time Trend */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700"
+          >
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Wait Time Trend (Last 24 Hours)
+            </h2>
+            <LineChart
+              data={formatChartData()}
+              xKey="time"
+              yKeys={[
+                { key: 'Wait Time (min)', color: '#3b82f6', name: 'Avg Wait Time' },
+              ]}
+              height={300}
+              yAxisLabel="Minutes"
+            />
+          </motion.div>
+
+          {/* Status Distribution */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700"
+          >
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Token Status Distribution
+            </h2>
+            <PieChart
+              data={formatStatusDistribution()}
+              dataKey="value"
+              nameKey="name"
+              colors={formatStatusDistribution().map((d) => d.fill)}
+              height={300}
+              innerRadius={60}
+            />
+          </motion.div>
+
+          {/* Service Comparison */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 lg:col-span-2"
+          >
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Top Services by Volume
+            </h2>
+            <BarChart
+              data={formatServiceData()}
+              xKey="name"
+              yKeys={[
+                { key: 'Tokens', color: '#3b82f6', name: 'Total Tokens' },
+                { key: 'Completed', color: '#10b981', name: 'Completed' },
+                { key: 'No-Shows', color: '#ef4444', name: 'No-Shows' },
+              ]}
+              height={300}
+              yAxisLabel="Count"
+            />
+          </motion.div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-sm text-gray-500 dark:text-gray-400 pt-8 border-t border-gray-200 dark:border-gray-700">
+          Last updated: {data?.timestamp ? new Date(data.timestamp).toLocaleString() : 'N/A'}
+        </div>
+      </div>
+    </div>
+  );
+}
